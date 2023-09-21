@@ -26,12 +26,16 @@ class _MyAppState extends State<MyApp> {
   ReceivePort port = ReceivePort();
 
   String logStr = '';
-  bool isRunning;
-  LocationDto lastLocation;
+  bool isRunning = false;
+  LocationDto? lastLocation;
 
   @override
   void initState() {
     super.initState();
+
+    WidgetsBinding.instance.addPostFrameCallback((timeStamp) {
+      _checkLocationPermission();
+    });
 
     if (IsolateNameServer.lookupPortByName(
             LocationServiceRepository.isolateName) !=
@@ -45,6 +49,7 @@ class _MyAppState extends State<MyApp> {
 
     port.listen(
       (dynamic data) async {
+        print(data);
         await updateUI(data);
       },
     );
@@ -181,6 +186,7 @@ class _MyAppState extends State<MyApp> {
 
   Future<bool> _checkLocationPermission() async {
     final access = await LocationPermissions().checkPermissionStatus();
+    print(access);
     switch (access) {
       case PermissionStatus.unknown:
       case PermissionStatus.denied:
@@ -188,6 +194,7 @@ class _MyAppState extends State<MyApp> {
         final permission = await LocationPermissions().requestPermissions(
           permissionLevel: LocationPermissionLevel.locationAlways,
         );
+        print(permission);
         if (permission == PermissionStatus.granted) {
           return true;
         } else {
@@ -205,12 +212,15 @@ class _MyAppState extends State<MyApp> {
 
   Future<void> _startLocator() async{
     Map<String, dynamic> data = {'countInit': 1};
-    return await BackgroundLocator.registerLocationUpdate(LocationCallbackHandler.callback,
+    return await BackgroundLocator.registerLocationUpdate(
+      LocationCallbackHandler.callback,
         initCallback: LocationCallbackHandler.initCallback,
         initDataCallback: data,
         disposeCallback: LocationCallbackHandler.disposeCallback,
         iosSettings: IOSSettings(
-            accuracy: LocationAccuracy.NAVIGATION, distanceFilter: 0),
+          accuracy: LocationAccuracy.NAVIGATION,
+          distanceFilter: 0,
+        ),
         autoStop: false,
         androidSettings: AndroidSettings(
             accuracy: LocationAccuracy.NAVIGATION,
@@ -225,6 +235,9 @@ class _MyAppState extends State<MyApp> {
                     'Background location is on to keep the app up-tp-date with your location. This is required for main features to work properly when the app is not running.',
                 notificationIconColor: Colors.grey,
                 notificationTapCallback:
-                    LocationCallbackHandler.notificationCallback)));
+                    LocationCallbackHandler.notificationCallback,
+            ),
+        ),
+    );
   }
 }
